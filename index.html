@@ -1,642 +1,388 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
-<meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
-<title>AI Voice Todo</title>
-
-
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI To-Do Assistant</title>
 <style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-* {
-    box-sizing: border-box;
-}
-
-
-body {
-
-    margin: 0;
-
-    font-family: Arial, sans-serif;
-
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     background: #0f172a;
-
-    color: white;
-
+    color: #e2e8f0;
     min-height: 100vh;
-
     display: flex;
-
     justify-content: center;
+    padding: 20px;
+  }
 
-}
-
-
-.container {
-
+  .container {
     width: 100%;
-
-    max-width: 700px;
-
-    min-height: 100vh;
-
-    background: #1e293b;
-
+    max-width: 720px;
     display: flex;
-
     flex-direction: column;
+    gap: 16px;
+  }
 
-}
-
-
-.header {
-
-    background: #2563eb;
-
-    padding: 25px;
-
+  h1 {
+    font-size: 1.5rem;
     text-align: center;
+    color: #38bdf8;
+  }
 
-}
-
-
-.header h1 {
-
-    margin: 0;
-
-}
-
-
-.header p {
-
-    color: #dbeafe;
-
-}
-
-
-#chat {
-
+  .chat-box {
     flex: 1;
-
-    padding: 20px;
-
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 340px;
+    max-height: 55vh;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
-}
+  .msg {
+    padding: 10px 14px;
+    border-radius: 12px;
+    max-width: 85%;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
 
-
-.message {
-
-    max-width: 80%;
-
-    padding: 12px 16px;
-
-    border-radius: 15px;
-
-    margin-bottom: 15px;
-
-    line-height: 1.5;
-
-}
-
-
-.user {
-
+  .msg.user {
     background: #2563eb;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
 
-    margin-left: auto;
-
-}
-
-
-.ai {
-
+  .msg.bot {
     background: #334155;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
 
-}
+  .msg.sys {
+    background: #7f1d1d;
+    align-self: center;
+    font-size: 0.85rem;
+    color: #fecaca;
+  }
 
+  .todos {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 14px;
+  }
 
-.todo-box {
+  .todos h2 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+    color: #94a3b8;
+  }
 
-    padding: 20px;
+  .todos ul { list-style: none; }
 
-    background: #0f172a;
+  .todos li {
+    padding: 6px 0;
+    border-bottom: 1px solid #334155;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-}
+  .todos li:last-child { border-bottom: none; }
 
-
-.todo-box h2 {
-
-    margin-top: 0;
-
-}
-
-
-.todo {
-
-    background: #334155;
-
-    padding: 12px;
-
-    margin: 8px 0;
-
-    border-radius: 8px;
-
-}
-
-
-.completed {
-
+  .todos li.done {
     text-decoration: line-through;
+    color: #64748b;
+  }
 
-    color: #94a3b8;
+  .todos .empty {
+    color: #64748b;
+    font-style: italic;
+  }
 
-}
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
 
-
-.controls {
-
+  input[type="text"] {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #334155;
     background: #0f172a;
+    color: #e2e8f0;
+    font-size: 1rem;
+    outline: none;
+  }
 
-    padding: 20px;
+  input[type="text"]:focus { border-color: #38bdf8; }
 
-    text-align: center;
-
-}
-
-
-#micButton {
-
-    width: 70px;
-
-    height: 70px;
-
+  button {
+    padding: 12px 16px;
     border: none;
-
-    border-radius: 50%;
-
+    border-radius: 10px;
     background: #2563eb;
-
     color: white;
-
-    font-size: 30px;
-
+    font-size: 1rem;
     cursor: pointer;
+    transition: background 0.15s;
+  }
 
-}
+  button:hover:not(:disabled) { background: #1d4ed8; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  #micBtn {
+    background: #16a34a;
+    font-size: 1.2rem;
+    padding: 12px 16px;
+  }
 
-#micButton.listening {
+  #micBtn:hover:not(:disabled) { background: #15803d; }
 
+  #micBtn.listening {
     background: #dc2626;
-
     animation: pulse 1s infinite;
+  }
 
-}
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+    50% { box-shadow: 0 0 0 12px rgba(220, 38, 38, 0); }
+  }
 
+  #ttsToggle {
+    background: #475569;
+    font-size: 1.1rem;
+    padding: 12px 16px;
+  }
 
-@keyframes pulse {
-
-    50% {
-
-        transform: scale(1.1);
-
-    }
-
-}
-
-
-#status {
-
-    text-align: center;
-
-    padding: 10px;
-
-    color: #94a3b8;
-
-}
-
-
+  #ttsToggle.on { background: #0891b2; }
 </style>
-
 </head>
-
-
 <body>
-
 
 <div class="container">
 
+  <h1>🧠 AI To-Do Assistant</h1>
 
-    <div class="header">
-
-        <h1>🤖 AI To-Do Assistant</h1>
-
-        <p>Speak to manage your tasks</p>
-
+  <div class="chat-box" id="chatBox">
+    <div class="msg bot">
+      Hi! Type or tap the mic 🎤 and speak.
+      Try: "Add buy milk, walk the dog, and finish homework".
     </div>
+  </div>
 
+  <div class="todos">
+    <h2>📋 Your Tasks</h2>
+    <ul id="todoList"><li class="empty">No tasks yet.</li></ul>
+  </div>
 
-    <div id="chat">
-
-        <div class="message ai">
-
-            👋 Hello! Tap the microphone and tell me what to do.
-
-        </div>
-
-    </div>
-
-
-    <div class="todo-box">
-
-        <h2>📋 My Tasks</h2>
-
-        <div id="todos">
-
-            No tasks yet.
-
-        </div>
-
-    </div>
-
-
-    <div id="status">
-
-        Press 🎤 and speak
-
-    </div>
-
-
-    <div class="controls">
-
-        <button
-            id="micButton"
-            onclick="startListening()"
-        >
-
-            🎤
-
-        </button>
-
-    </div>
-
+  <div class="input-row">
+    <button id="micBtn" title="Speak to AI">🎤</button>
+    <input type="text" id="textInput" placeholder="Type your message or press mic to speak..." />
+    <button id="sendBtn">Send</button>
+    <button id="ttsToggle" class="on" title="Toggle voice reply">🔊</button>
+  </div>
 
 </div>
 
-
 <script>
+// ==========================================
+// ELEMENTS
+// ==========================================
+const chatBox    = document.getElementById("chatBox");
+const todoList   = document.getElementById("todoList");
+const textInput  = document.getElementById("textInput");
+const sendBtn    = document.getElementById("sendBtn");
+const micBtn     = document.getElementById("micBtn");
+const ttsToggle  = document.getElementById("ttsToggle");
+
+let recognition = null;
+let listening   = false;
+let ttsEnabled  = true;
 
 
-const chat =
-    document.getElementById("chat");
-
-
-const todosElement =
-    document.getElementById("todos");
-
-
-const micButton =
-    document.getElementById("micButton");
-
-
-const statusText =
-    document.getElementById("status");
-
-
-// ==================================
-// SPEECH RECOGNITION
-// ==================================
-
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-
-let recognition;
-
-
-if (SpeechRecognition) {
-
-    recognition =
-        new SpeechRecognition();
-
-    recognition.lang = "en-US";
-
-    recognition.continuous = false;
-
-    recognition.interimResults = false;
-
-
-    recognition.onstart = function() {
-
-        micButton.classList.add(
-            "listening"
-        );
-
-        statusText.textContent =
-            "🎤 Listening...";
-
-    };
-
-
-    recognition.onend = function() {
-
-        micButton.classList.remove(
-            "listening"
-        );
-
-    };
-
-
-    recognition.onerror = function(event) {
-
-        micButton.classList.remove(
-            "listening"
-        );
-
-        statusText.textContent =
-            "Microphone error: "
-            + event.error;
-
-    };
-
-
-    recognition.onresult =
-        function(event) {
-
-            const text =
-                event.results[0][0]
-                    .transcript;
-
-
-            addMessage(
-                text,
-                "user"
-            );
-
-
-            sendToAI(text);
-
-        };
-
+// ==========================================
+// CHAT RENDER
+// ==========================================
+function addMessage(text, cls) {
+  const div = document.createElement("div");
+  div.className = "msg " + cls;
+  div.textContent = text;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 
-// ==================================
-// START LISTENING
-// ==================================
-
-function startListening() {
-
-    if (!recognition) {
-
-        alert(
-            "Please use Google Chrome."
-        );
-
-        return;
-
-    }
-
-
-    recognition.start();
-
+// ==========================================
+// TODO RENDER
+// ==========================================
+function renderTodos(todos) {
+  todoList.innerHTML = "";
+  if (!todos || todos.length === 0) {
+    todoList.innerHTML = '<li class="empty">No tasks yet.</li>';
+    return;
+  }
+  todos.forEach(t => {
+    const li = document.createElement("li");
+    li.className = t.completed ? "done" : "";
+    li.textContent = (t.completed ? "✅ " : "⬜ ") + t.task;
+    todoList.appendChild(li);
+  });
 }
 
 
-// ==================================
-// CHAT MESSAGE
-// ==================================
-
-function addMessage(
-    text,
-    type
-) {
-
-    const div =
-        document.createElement("div");
-
-
-    div.className =
-        "message " + type;
-
-
-    div.textContent =
-        text;
-
-
-    chat.appendChild(div);
-
-
-    chat.scrollTop =
-        chat.scrollHeight;
-
+// ==========================================
+// TEXT-TO-SPEECH (Voice Reply)
+// ==========================================
+function speak(text) {
+  if (!ttsEnabled || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US";
+  u.rate = 1.0;
+  window.speechSynthesis.speak(u);
 }
 
 
-// ==================================
-// SEND TO AI
-// ==================================
-
-async function sendToAI(message) {
-
-    statusText.textContent =
-        "🤔 AI is thinking...";
-
-
-    try {
-
-        const response =
-            await fetch(
-                "/chat",
-                {
-
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-                    body: JSON.stringify({
-
-                        message:
-                            message
-
-                    })
-
-                }
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (data.error) {
-
-            throw new Error(
-                data.error
-            );
-
-        }
-
-
-        addMessage(
-            data.reply,
-            "ai"
-        );
-
-
-        // Update tasks
-
-        updateTodos(
-            data.todos
-        );
-
-
-        // Speak response
-
-        speak(
-            data.reply
-        );
-
-
-        statusText.textContent =
-            "Press 🎤 and speak again";
-
-
-    } catch (error) {
-
-        console.error(error);
-
-
-        addMessage(
-
-            "❌ " +
-            error.message,
-
-            "ai"
-
-        );
-
-
-        statusText.textContent =
-            "Something went wrong.";
-
-    }
-
-}
-
-
-// ==================================
-// DISPLAY TODOS
-// ==================================
-
-function updateTodos(
-    todos
-) {
-
-    todosElement.innerHTML = "";
-
-
-    if (!todos || todos.length === 0) {
-
-        todosElement.textContent =
-            "No tasks yet.";
-
-        return;
-
-    }
-
-
-    todos.forEach(function(todo) {
-
-        const div =
-            document.createElement(
-                "div"
-            );
-
-
-        div.className = "todo";
-
-
-        if (todo.completed) {
-
-            div.classList.add(
-                "completed"
-            );
-
-        }
-
-
-        div.textContent =
-            (todo.completed
-                ? "✅ "
-                : "⬜ ")
-            + todo.task;
-
-
-        todosElement.appendChild(
-            div
-        );
-
+// ==========================================
+// SEND MESSAGE
+// ==========================================
+async function sendMessage(msg) {
+  msg = (msg || "").trim();
+  if (!msg) return;
+
+  addMessage(msg, "user");
+  textInput.value = "";
+  sendBtn.disabled = true;
+  micBtn.disabled = true;
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: msg })
     });
 
-}
+    const data = await res.json();
 
-
-// ==================================
-// TEXT TO SPEECH
-// ==================================
-
-function speak(text) {
-
-    if (
-        !("speechSynthesis" in window)
-    ) {
-
-        return;
-
+    if (data.error) {
+      addMessage("Error: " + data.error, "sys");
+      speak("Sorry, there was an error.");
+    } else {
+      addMessage(data.reply, "bot");
+      speak(data.reply);
+      renderTodos(data.todos);
     }
-
-
-    speechSynthesis.cancel();
-
-
-    const speech =
-        new SpeechSynthesisUtterance(
-            text
-        );
-
-
-    speech.lang = "en-US";
-
-    speech.rate = 1;
-
-    speech.pitch = 1;
-
-
-    speechSynthesis.speak(
-        speech
-    );
-
+  } catch (err) {
+    addMessage("Network error: " + err.message, "sys");
+  } finally {
+    sendBtn.disabled = false;
+    micBtn.disabled = false;
+    textInput.focus();
+  }
 }
 
 
+// ==========================================
+// SPEECH RECOGNITION (Mic Input)
+// ==========================================
+function setupRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SR) {
+    micBtn.disabled = true;
+    micBtn.title = "Speech recognition not supported in this browser";
+    addMessage("⚠️ Your browser does not support speech recognition. Please use Chrome, Edge, or Safari.", "sys");
+    return;
+  }
+
+  recognition = new SR();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    listening = true;
+    micBtn.classList.add("listening");
+    micBtn.textContent = "🔴";
+  };
+
+  recognition.onend = () => {
+    listening = false;
+    micBtn.classList.remove("listening");
+    micBtn.textContent = "🎤";
+  };
+
+  recognition.onerror = (e) => {
+    console.warn("Speech error:", e.error);
+    if (e.error === "not-allowed") {
+      addMessage("⚠️ Microphone permission denied. Please allow mic access.", "sys");
+    } else if (e.error === "no-speech") {
+      addMessage("🎤 No speech detected. Try again.", "sys");
+    } else {
+      addMessage("🎤 Mic error: " + e.error, "sys");
+    }
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    addMessage("🎤 " + transcript, "user");
+    sendMessage(transcript);
+  };
+}
+
+
+// ==========================================
+// EVENTS
+// ==========================================
+sendBtn.addEventListener("click", () => sendMessage(textInput.value));
+
+textInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage(textInput.value);
+});
+
+micBtn.addEventListener("click", () => {
+  if (!recognition) return;
+  if (listening) {
+    recognition.stop();
+  } else {
+    try { recognition.start(); } catch (e) { /* already started */ }
+  }
+});
+
+ttsToggle.addEventListener("click", () => {
+  ttsEnabled = !ttsEnabled;
+  ttsToggle.classList.toggle("on", ttsEnabled);
+  ttsToggle.textContent = ttsEnabled ? "🔊" : "🔇";
+  if (!ttsEnabled) window.speechSynthesis.cancel();
+});
+
+
+// ==========================================
+// INIT
+// ==========================================
+setupRecognition();
+textInput.focus();
+
+// Load existing todos on startup
+fetch("/chat", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ message: "list my tasks" })
+})
+.then(r => r.json())
+.then(d => { if (d.todos) renderTodos(d.todos); })
+.catch(() => {});
 </script>
 
-
 </body>
-
 </html>

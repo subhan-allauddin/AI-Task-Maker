@@ -89,8 +89,6 @@ def add_todo(task):
         }
 
 
-    # Prevent duplicates
-
     for todo in todos:
 
         if todo["task"].lower() == task.lower():
@@ -120,6 +118,96 @@ def add_todo(task):
 
         "message":
             f"Added '{task}' to your todo list.",
+
+        "todos": todos
+
+    }
+
+
+# ==========================================
+# ADD MULTIPLE TODOS
+# ==========================================
+
+def add_multiple_todos(tasks):
+
+    if not tasks:
+
+        return {
+            "success": False,
+            "message": "No tasks provided.",
+            "todos": todos
+        }
+
+
+    added = []
+    skipped = []
+
+
+    for task in tasks:
+
+        task = task.strip()
+
+        if not task:
+            continue
+
+
+        exists = False
+
+        for todo in todos:
+
+            if todo["task"].lower() == task.lower():
+
+                exists = True
+                break
+
+
+        if exists:
+
+            skipped.append(task)
+
+        else:
+
+            todos.append({
+
+                "task": task,
+
+                "completed": False
+
+            })
+
+            added.append(task)
+
+
+    save_todos()
+
+
+    message_parts = []
+
+    if added:
+
+        message_parts.append(
+            f"Added {len(added)} task(s): "
+            + ", ".join(f"'{t}'" for t in added)
+        )
+
+    if skipped:
+
+        message_parts.append(
+            f"Skipped {len(skipped)} duplicate(s): "
+            + ", ".join(f"'{t}'" for t in skipped)
+        )
+
+
+    if not message_parts:
+
+        message_parts.append("No tasks were added.")
+
+
+    return {
+
+        "success": True,
+
+        "message": " ".join(message_parts),
 
         "todos": todos
 
@@ -274,6 +362,52 @@ tools = [
 
         "function": {
 
+            "name": "add_multiple_todos",
+
+            "description":
+                "Add multiple tasks to the todo list at once. "
+                "Use this when the user provides several tasks "
+                "in one message, separated by commas, 'and', "
+                "newlines, or any other delimiter.",
+
+            "parameters": {
+
+                "type": "object",
+
+                "properties": {
+
+                    "tasks": {
+
+                        "type": "array",
+
+                        "items": {
+
+                            "type": "string"
+
+                        },
+
+                        "description":
+                            "A list of tasks to add."
+
+                    }
+
+                },
+
+                "required": ["tasks"]
+
+            }
+
+        }
+
+    },
+
+
+    {
+
+        "type": "function",
+
+        "function": {
+
             "name": "list_todos",
 
             "description":
@@ -378,7 +512,7 @@ You are a helpful AI To-Do Assistant.
 
 You can:
 
-1. Add tasks
+1. Add tasks (single or multiple at once)
 2. List tasks
 3. Remove tasks
 4. Complete tasks
@@ -386,10 +520,16 @@ You can:
 Always use a tool when the user wants to
 modify or view their todo list.
 
+If the user provides multiple tasks in one
+message (e.g., "add buy milk, walk the dog,
+and finish homework"), use the
+`add_multiple_todos` tool to add them all
+at once.
+
 If the user asks for multiple actions,
 perform them in the correct order.
 
-Example:
+Examples:
 
 "Delete learn Python and then show all tasks"
 
@@ -398,14 +538,24 @@ means:
 1. Remove learn Python
 2. List the remaining tasks
 
-Another example:
-
 "Complete learn Python and show my tasks"
 
 means:
 
 1. Mark learn Python as completed
 2. List the tasks
+
+"Add buy groceries, call mom, and clean room"
+
+means:
+
+1. Use add_multiple_todos with
+   ["buy groceries", "call mom", "clean room"]
+
+Note: User input may come from voice
+transcription, so it may contain small
+typos or filler words. Interpret the
+intent, not the exact wording.
 
 Be concise and friendly.
 
@@ -425,6 +575,13 @@ def execute_tool(
 
         return add_todo(
             arguments.get("task", "")
+        )
+
+
+    if function_name == "add_multiple_todos":
+
+        return add_multiple_todos(
+            arguments.get("tasks", [])
         )
 
 
@@ -511,10 +668,6 @@ def chat():
             }), 400
 
 
-        # ==============================
-        # INITIAL MESSAGE
-        # ==============================
-
         messages = [
 
             {
@@ -538,10 +691,6 @@ def chat():
         ]
 
 
-        # ==============================
-        # FIRST AI CALL
-        # ==============================
-
         response = client.chat.completions.create(
 
             model=MODEL,
@@ -559,10 +708,6 @@ def chat():
             response.choices[0].message
         )
 
-
-        # ==============================
-        # TOOL LOOP
-        # ==============================
 
         while assistant_message.tool_calls:
 
@@ -596,8 +741,6 @@ def chat():
                 )
 
 
-                # Execute function
-
                 result = execute_tool(
 
                     function_name,
@@ -612,8 +755,6 @@ def chat():
                 )
 
 
-                # Return result to AI
-
                 messages.append({
 
                     "role": "tool",
@@ -626,10 +767,6 @@ def chat():
 
                 })
 
-
-            # ==============================
-            # AI AGAIN
-            # ==============================
 
             response = client.chat.completions.create(
 
@@ -648,10 +785,6 @@ def chat():
                 response.choices[0].message
             )
 
-
-        # ==============================
-        # FINAL RESPONSE
-        # ==============================
 
         final_text = (
             assistant_message.content
