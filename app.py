@@ -1,7 +1,7 @@
 import os
 import json
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_file
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -14,16 +14,31 @@ load_dotenv()
 
 api_key = os.getenv("GROQ_API_KEY")
 
-if not api_key:
-    raise ValueError("GROQ_API_KEY not found in .env")
-
-client = Groq(api_key=api_key)
+client = Groq(api_key=api_key) if api_key else None
 
 app = Flask(__name__)
 
 MODEL = "openai/gpt-oss-120b"
 
-TODO_FILE = "todos.json"
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
+
+IS_SERVERLESS = os.environ.get("VERCEL") == "1"
+
+
+def todo_file():
+
+    if IS_SERVERLESS:
+
+        return os.path.join("/tmp", "todos.json")
+
+    return os.path.join(BASE_DIR, "todos.json")
+
+
+def index_file():
+
+    return os.path.join(BASE_DIR, "index.html")
 
 
 # ==========================================
@@ -32,13 +47,15 @@ TODO_FILE = "todos.json"
 
 def load_todos():
 
-    if not os.path.exists(TODO_FILE):
+    path = todo_file()
+
+    if not os.path.exists(path):
         return []
 
     try:
 
         with open(
-            TODO_FILE,
+            path,
             "r",
             encoding="utf-8"
         ) as file:
@@ -59,17 +76,23 @@ todos = load_todos()
 
 def save_todos():
 
-    with open(
-        TODO_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
+    try:
 
-        json.dump(
-            todos,
-            file,
-            indent=4
-        )
+        with open(
+            todo_file(),
+            "w",
+            encoding="utf-8"
+        ) as file:
+
+            json.dump(
+                todos,
+                file,
+                indent=4
+            )
+
+    except OSError:
+
+        pass
 
 
 # ==========================================
@@ -621,10 +644,7 @@ def execute_tool(
 @app.route("/")
 def home():
 
-    return send_from_directory(
-        ".",
-        "index.html"
-    )
+    return send_file(index_file())
 
 
 # ==========================================
@@ -638,6 +658,14 @@ def home():
 def chat():
 
     try:
+
+        if client is None:
+
+            return jsonify({
+                "error":
+                    "GROQ_API_KEY is not set."
+            }), 500
+
 
         data = request.get_json()
 
