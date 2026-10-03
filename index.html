@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>AI Voice Todo</title>
+
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+
+body {
+
+    margin: 0;
+
+    font-family: Arial, sans-serif;
+
+    background: #0f172a;
+
+    color: white;
+
+    min-height: 100vh;
+
+    display: flex;
+
+    justify-content: center;
+
+}
+
+
+.container {
+
+    width: 100%;
+
+    max-width: 700px;
+
+    min-height: 100vh;
+
+    background: #1e293b;
+
+    display: flex;
+
+    flex-direction: column;
+
+}
+
+
+.header {
+
+    background: #2563eb;
+
+    padding: 25px;
+
+    text-align: center;
+
+}
+
+
+.header h1 {
+
+    margin: 0;
+
+}
+
+
+.header p {
+
+    color: #dbeafe;
+
+}
+
+
+#chat {
+
+    flex: 1;
+
+    padding: 20px;
+
+    overflow-y: auto;
+
+}
+
+
+.message {
+
+    max-width: 80%;
+
+    padding: 12px 16px;
+
+    border-radius: 15px;
+
+    margin-bottom: 15px;
+
+    line-height: 1.5;
+
+}
+
+
+.user {
+
+    background: #2563eb;
+
+    margin-left: auto;
+
+}
+
+
+.ai {
+
+    background: #334155;
+
+}
+
+
+.todo-box {
+
+    padding: 20px;
+
+    background: #0f172a;
+
+}
+
+
+.todo-box h2 {
+
+    margin-top: 0;
+
+}
+
+
+.todo {
+
+    background: #334155;
+
+    padding: 12px;
+
+    margin: 8px 0;
+
+    border-radius: 8px;
+
+}
+
+
+.completed {
+
+    text-decoration: line-through;
+
+    color: #94a3b8;
+
+}
+
+
+.controls {
+
+    background: #0f172a;
+
+    padding: 20px;
+
+    text-align: center;
+
+}
+
+
+#micButton {
+
+    width: 70px;
+
+    height: 70px;
+
+    border: none;
+
+    border-radius: 50%;
+
+    background: #2563eb;
+
+    color: white;
+
+    font-size: 30px;
+
+    cursor: pointer;
+
+}
+
+
+#micButton.listening {
+
+    background: #dc2626;
+
+    animation: pulse 1s infinite;
+
+}
+
+
+@keyframes pulse {
+
+    50% {
+
+        transform: scale(1.1);
+
+    }
+
+}
+
+
+#status {
+
+    text-align: center;
+
+    padding: 10px;
+
+    color: #94a3b8;
+
+}
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <div class="header">
+
+        <h1>🤖 AI To-Do Assistant</h1>
+
+        <p>Speak to manage your tasks</p>
+
+    </div>
+
+
+    <div id="chat">
+
+        <div class="message ai">
+
+            👋 Hello! Tap the microphone and tell me what to do.
+
+        </div>
+
+    </div>
+
+
+    <div class="todo-box">
+
+        <h2>📋 My Tasks</h2>
+
+        <div id="todos">
+
+            No tasks yet.
+
+        </div>
+
+    </div>
+
+
+    <div id="status">
+
+        Press 🎤 and speak
+
+    </div>
+
+
+    <div class="controls">
+
+        <button
+            id="micButton"
+            onclick="startListening()"
+        >
+
+            🎤
+
+        </button>
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+
+const chat =
+    document.getElementById("chat");
+
+
+const todosElement =
+    document.getElementById("todos");
+
+
+const micButton =
+    document.getElementById("micButton");
+
+
+const statusText =
+    document.getElementById("status");
+
+
+// ==================================
+// SPEECH RECOGNITION
+// ==================================
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+let recognition;
+
+
+if (SpeechRecognition) {
+
+    recognition =
+        new SpeechRecognition();
+
+    recognition.lang = "en-US";
+
+    recognition.continuous = false;
+
+    recognition.interimResults = false;
+
+
+    recognition.onstart = function() {
+
+        micButton.classList.add(
+            "listening"
+        );
+
+        statusText.textContent =
+            "🎤 Listening...";
+
+    };
+
+
+    recognition.onend = function() {
+
+        micButton.classList.remove(
+            "listening"
+        );
+
+    };
+
+
+    recognition.onerror = function(event) {
+
+        micButton.classList.remove(
+            "listening"
+        );
+
+        statusText.textContent =
+            "Microphone error: "
+            + event.error;
+
+    };
+
+
+    recognition.onresult =
+        function(event) {
+
+            const text =
+                event.results[0][0]
+                    .transcript;
+
+
+            addMessage(
+                text,
+                "user"
+            );
+
+
+            sendToAI(text);
+
+        };
+
+}
+
+
+// ==================================
+// START LISTENING
+// ==================================
+
+function startListening() {
+
+    if (!recognition) {
+
+        alert(
+            "Please use Google Chrome."
+        );
+
+        return;
+
+    }
+
+
+    recognition.start();
+
+}
+
+
+// ==================================
+// CHAT MESSAGE
+// ==================================
+
+function addMessage(
+    text,
+    type
+) {
+
+    const div =
+        document.createElement("div");
+
+
+    div.className =
+        "message " + type;
+
+
+    div.textContent =
+        text;
+
+
+    chat.appendChild(div);
+
+
+    chat.scrollTop =
+        chat.scrollHeight;
+
+}
+
+
+// ==================================
+// SEND TO AI
+// ==================================
+
+async function sendToAI(message) {
+
+    statusText.textContent =
+        "🤔 AI is thinking...";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/chat",
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body: JSON.stringify({
+
+                        message:
+                            message
+
+                    })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (data.error) {
+
+            throw new Error(
+                data.error
+            );
+
+        }
+
+
+        addMessage(
+            data.reply,
+            "ai"
+        );
+
+
+        // Update tasks
+
+        updateTodos(
+            data.todos
+        );
+
+
+        // Speak response
+
+        speak(
+            data.reply
+        );
+
+
+        statusText.textContent =
+            "Press 🎤 and speak again";
+
+
+    } catch (error) {
+
+        console.error(error);
+
+
+        addMessage(
+
+            "❌ " +
+            error.message,
+
+            "ai"
+
+        );
+
+
+        statusText.textContent =
+            "Something went wrong.";
+
+    }
+
+}
+
+
+// ==================================
+// DISPLAY TODOS
+// ==================================
+
+function updateTodos(
+    todos
+) {
+
+    todosElement.innerHTML = "";
+
+
+    if (!todos || todos.length === 0) {
+
+        todosElement.textContent =
+            "No tasks yet.";
+
+        return;
+
+    }
+
+
+    todos.forEach(function(todo) {
+
+        const div =
+            document.createElement(
+                "div"
+            );
+
+
+        div.className = "todo";
+
+
+        if (todo.completed) {
+
+            div.classList.add(
+                "completed"
+            );
+
+        }
+
+
+        div.textContent =
+            (todo.completed
+                ? "✅ "
+                : "⬜ ")
+            + todo.task;
+
+
+        todosElement.appendChild(
+            div
+        );
+
+    });
+
+}
+
+
+// ==================================
+// TEXT TO SPEECH
+// ==================================
+
+function speak(text) {
+
+    if (
+        !("speechSynthesis" in window)
+    ) {
+
+        return;
+
+    }
+
+
+    speechSynthesis.cancel();
+
+
+    const speech =
+        new SpeechSynthesisUtterance(
+            text
+        );
+
+
+    speech.lang = "en-US";
+
+    speech.rate = 1;
+
+    speech.pitch = 1;
+
+
+    speechSynthesis.speak(
+        speech
+    );
+
+}
+
+
+</script>
+
+
+</body>
+
+</html>
